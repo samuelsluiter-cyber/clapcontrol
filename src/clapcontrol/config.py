@@ -22,6 +22,12 @@ DEFAULT_CONFIG = {
         "custom_double_command": "",
         "custom_triple_command": ""
     },
+    "butler": {
+        "engine": "macos",                            # "elevenlabs" oder "macos"
+        "elevenlabs_api_key": "",                     # Dein ElevenLabs API-Key
+        "elevenlabs_voice_id": "pNInz6obpgDQGcFmaJgB", # z. B. Adam oder jede andere Stimme
+        "elevenlabs_model": "eleven_multilingual_v2"
+    },
     "feedback": {
         "audio_feedback": True,     # play a gentle click/tick when recognized
         "feedback_sound": "/System/Library/Sounds/Tink.aiff"

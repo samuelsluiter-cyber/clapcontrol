@@ -1,12 +1,17 @@
-"""Casual Butler Briefing for Samuel Sluiter."""
+"""Casual Butler Briefing for Samuel Sluiter with macOS & ElevenLabs voice support."""
+import os
 import re
+import json
 import datetime
 import subprocess
+import urllib.request
 from pathlib import Path
+from .config import load_config
 
 VAULT_DIR = Path.home() / "Library/Mobile Documents/com~apple~CloudDocs/Second Brain"
 TODOS_FILE = VAULT_DIR / "Planung/Todos.md"
 FOKUS_FILE = VAULT_DIR / "Leben/Tagesfokus.md"
+TEMP_AUDIO = Path("/tmp/clapcontrol_butler.mp3")
 
 def clean_task_text(text: str) -> str:
     # Remove markdown formatting, IDs, tags, and unicode math subscripts
@@ -74,14 +79,54 @@ def get_casual_briefing() -> str:
 
     return speech
 
+def speak_with_elevenlabs(text: str, api_key: str, voice_id: str, model_id: str = "eleven_multilingual_v2") -> bool:
+    """Streams realistic human speech from ElevenLabs API."""
+    url = f"https://api.elevenlabs.io/v1/text-to-speech/{voice_id}"
+    headers = {
+        "xi-api-key": api_key,
+        "Content-Type": "application/json",
+        "Accept": "audio/mpeg"
+    }
+    payload = {
+        "text": text,
+        "model_id": model_id,
+        "voice_settings": {
+            "stability": 0.45,
+            "similarity_boost": 0.85,
+            "use_speaker_boost": True
+        }
+    }
+    try:
+        req = urllib.request.Request(url, data=json.dumps(payload).encode("utf-8"), headers=headers, method="POST")
+        with urllib.request.urlopen(req, timeout=12) as resp:
+            if resp.status == 200:
+                with open(TEMP_AUDIO, "wb") as f:
+                    f.write(resp.read())
+                subprocess.run(["afplay", str(TEMP_AUDIO)], timeout=25)
+                return True
+    except Exception:
+        pass
+    return False
+
 def speak_briefing():
     text = get_casual_briefing()
-    # Try Anna voice directly, fallback to default system voice
+    cfg = load_config()
+    butler_cfg = cfg.get("butler", {})
+
+    api_key = butler_cfg.get("elevenlabs_api_key") or os.environ.get("ELEVENLABS_API_KEY", "")
+    voice_id = butler_cfg.get("elevenlabs_voice_id", "pNInz6obpgDQGcFmaJgB")  # Default Adam
+    model_id = butler_cfg.get("elevenlabs_model", "eleven_multilingual_v2")
+
+    # If ElevenLabs configured, try it first
+    if butler_cfg.get("engine") == "elevenlabs" and api_key:
+        if speak_with_elevenlabs(text, api_key, voice_id, model_id):
+            return
+
+    # Fallback to high-quality macOS local voice (Anna)
     cmd = ["say", "-v", "Anna", text]
     try:
         res = subprocess.run(cmd, capture_output=True, timeout=20)
         if res.returncode != 0:
-            # Fallback without -v Anna
             subprocess.run(["say", text], capture_output=True, timeout=20)
     except Exception:
         try:
@@ -90,5 +135,4 @@ def speak_briefing():
             pass
 
 if __name__ == "__main__":
-    print("Briefing Text:", get_casual_briefing())
     speak_briefing()
