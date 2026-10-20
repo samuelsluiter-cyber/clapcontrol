@@ -162,9 +162,12 @@ def main():
     # Devices
     subparsers.add_parser("devices", help="Listet alle verfügbaren Mikrofone auf")
 
+    # Listen
+    subparsers.add_parser("listen", help="Hört dir zu und übergibt die Aufgabe an Antigravity")
+
     # Test actions
     test_parser = subparsers.add_parser("test", help="Testet Aktionen ohne Klatschen")
-    test_parser.add_argument("action", choices=["double", "triple", "wake", "mute", "butler"], help="Welche Aktion getestet werden soll")
+    test_parser.add_argument("action", choices=["double", "triple", "wake", "mute", "butler", "dialog"], help="Welche Aktion getestet werden soll")
 
     args = parser.parse_args()
 
@@ -172,6 +175,9 @@ def main():
         list_devices()
     elif args.command == "calibrate":
         run_calibrate()
+    elif args.command == "listen":
+        console.print("[bold cyan]🎤 Butler hört zu... Sprich jetzt deinen Auftrag:[/bold cyan]")
+        execute_action("voice_dialog", wait=True)
     elif args.command == "test":
         cfg = load_config()
         if args.action == "double":
@@ -181,6 +187,9 @@ def main():
         elif args.action == "butler":
             console.print("[cyan]Spreche Briefing...[/cyan]")
             execute_action("butler_briefing", wait=True)
+        elif args.action == "dialog":
+            console.print("[cyan]Starte Sprachdialog...[/cyan]")
+            execute_action("voice_dialog", wait=True)
         elif args.action == "triple":
             execute_action(cfg["actions"]["triple_clap"], wait=True)
         elif args.action == "mute":

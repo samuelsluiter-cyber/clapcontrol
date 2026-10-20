@@ -55,9 +55,17 @@ def trigger_butler(wait: bool = False):
     else:
         threading.Thread(target=speak_briefing, daemon=True).start()
 
+def trigger_voice_dialog(wait: bool = False):
+    """Starts listening to user speech and delegates tasks to Antigravity."""
+    from .dialog import run_voice_interaction
+    if wait:
+        run_voice_interaction()
+    else:
+        threading.Thread(target=run_voice_interaction, daemon=True).start()
+
 def execute_action(action_name: str, custom_cmd: str = "", feedback: bool = True, sound_path: str = "", wait: bool = False):
     """Executes the specified action."""
-    if feedback and sound_path and action_name != "butler_briefing":
+    if feedback and sound_path and action_name not in ("butler_briefing", "voice_dialog"):
         play_feedback_sound(sound_path)
 
     if action_name == "media_toggle":
@@ -73,6 +81,8 @@ def execute_action(action_name: str, custom_cmd: str = "", feedback: bool = True
     elif action_name == "wake_and_butler":
         wake_display()
         trigger_butler(wait=wait)
+    elif action_name == "voice_dialog":
+        trigger_voice_dialog(wait=wait)
     elif action_name == "custom" and custom_cmd:
         try:
             subprocess.Popen(custom_cmd, shell=True)
