@@ -1,4 +1,4 @@
-"""Clap pattern recognition (Double-Clap, Triple-Clap) with timing windows."""
+"""Clap pattern recognition (Single-Clap Wake, Double-Clap, Triple-Clap) with timing windows."""
 import time
 import threading
 from typing import Callable, Optional
@@ -8,13 +8,17 @@ class PatternRecognizer:
         self,
         on_double_clap: Optional[Callable[[], None]] = None,
         on_triple_clap: Optional[Callable[[], None]] = None,
+        on_wake_clap: Optional[Callable[[], None]] = None,
+        smart_sleep_wake: bool = True,
         min_interval: float = 0.15,
         max_interval: float = 0.85,
         pattern_timeout: float = 0.40,
-        cooldown: float = 1.0
+        cooldown: float = 1.2
     ):
         self.on_double_clap = on_double_clap
         self.on_triple_clap = on_triple_clap
+        self.on_wake_clap = on_wake_clap
+        self.smart_sleep_wake = smart_sleep_wake
         self.min_interval = min_interval
         self.max_interval = max_interval
         self.pattern_timeout = pattern_timeout
@@ -22,6 +26,7 @@ class PatternRecognizer:
 
         self.timestamps: list[float] = []
         self.last_action_time = 0.0
+        self.is_sleeping = False
         self.timer: Optional[threading.Timer] = None
         self.lock = threading.Lock()
 
@@ -33,7 +38,20 @@ class PatternRecognizer:
             if (now - self.last_action_time) < self.cooldown:
                 return
 
-            # Cancel pending double-clap timer if running
+            # SMART SLEEP/WAKE:
+            # If the screen is currently asleep, ANY clap immediately wakes it up!
+            if self.smart_sleep_wake and self.is_sleeping:
+                self.is_sleeping = False
+                self.last_action_time = now
+                self.timestamps.clear()
+                if self.timer is not None:
+                    self.timer.cancel()
+                    self.timer = None
+                if self.on_wake_clap:
+                    self.on_wake_clap()
+                return
+
+            # Normal awake mode: Cancel pending double-clap timer if running
             if self.timer is not None:
                 self.timer.cancel()
                 self.timer = None
@@ -47,11 +65,9 @@ class PatternRecognizer:
                 interval = self.timestamps[1] - self.timestamps[0]
                 if self.min_interval <= interval <= self.max_interval:
                     # Could be double clap or beginning of triple clap!
-                    # Start a short timer to wait if a 3rd clap arrives
                     self.timer = threading.Timer(self.pattern_timeout, self._trigger_double_clap)
                     self.timer.start()
                 else:
-                    # Interval too short or too long -> reset to just latest clap
                     self.timestamps = [now]
 
             elif n >= 3:
@@ -66,6 +82,8 @@ class PatternRecognizer:
     def _trigger_double_clap(self):
         with self.lock:
             self.last_action_time = time.time()
+            if self.smart_sleep_wake:
+                self.is_sleeping = True
             self.timestamps.clear()
             self.timer = None
         if self.on_double_clap:

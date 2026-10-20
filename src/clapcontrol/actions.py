@@ -34,9 +34,18 @@ def toggle_mute():
         pass
 
 def sleep_display():
-    """Instantly puts displays to sleep."""
+    """Instantly puts displays to sleep (keeps background audio listening alive)."""
     try:
         subprocess.run(["pmset", "displaysleepnow"], capture_output=True, timeout=2)
+    except Exception:
+        pass
+
+def wake_display():
+    """Wakes displays from sleep via user-activity assertion."""
+    try:
+        subprocess.run(["caffeinate", "-u", "-t", "2"], capture_output=True, timeout=2)
+        # Also send a harmless key event to ensure immediate screen light up
+        subprocess.run(["osascript", "-e", 'tell application "System Events" to key code 58'], capture_output=True, timeout=2)
     except Exception:
         pass
 
@@ -51,6 +60,8 @@ def execute_action(action_name: str, custom_cmd: str = "", feedback: bool = True
         toggle_mute()
     elif action_name == "display_sleep":
         sleep_display()
+    elif action_name == "display_wake":
+        wake_display()
     elif action_name == "custom" and custom_cmd:
         try:
             subprocess.Popen(custom_cmd, shell=True)

@@ -56,12 +56,10 @@ def run_calibrate():
         bar_len = 35
         fill = int(min(1.0, peak / 0.6) * bar_len)
         meter = "█" * fill + "░" * (bar_len - fill)
-        thresh_pos = int(min(1.0, detector.peak_threshold / 0.6) * bar_len)
 
         if is_clap:
             console.print(f"\r[bold green]💥 KLATSCHEN ERKANNT! [/bold green] Pegel: {peak:.3f} | Crest: {crest:.1f} | [{meter}]")
         else:
-            # Overwrite line dynamically
             status_color = "yellow" if peak > detector.peak_threshold * 0.7 else "dim"
             sys.stdout.write(f"\rPegel: [{status_color}]{meter}[/{status_color}] ({peak:.3f}) Threshold: {detector.peak_threshold:.3f}   ")
             sys.stdout.flush()
@@ -82,9 +80,19 @@ def run_daemon(web: bool = False, web_port: int = 49152):
 
     detector = ClapDetector(sample_rate=sr, sensitivity=cfg["audio"]["sensitivity"])
 
+    def on_wake():
+        action = cfg["actions"].get("single_clap_when_sleeping", "display_wake")
+        console.print(f"[bold green]👏 1× Klatschen erkannt![/bold green] Wecke Computer: [cyan]{action}[/cyan]")
+        execute_action(
+            action,
+            custom_cmd=cfg["actions"].get("custom_wake_command", ""),
+            feedback=cfg["feedback"]["audio_feedback"],
+            sound_path=cfg["feedback"]["feedback_sound"]
+        )
+
     def on_double():
         action = cfg["actions"]["double_clap"]
-        console.print(f"[bold green]👏 2× Klatschen erkannt![/bold green] Führe Aktion aus: [cyan]{action}[/cyan]")
+        console.print(f"[bold yellow]👏👏 2× Klatschen erkannt![/bold yellow] Computer in Ruhemodus: [cyan]{action}[/cyan]")
         execute_action(
             action,
             custom_cmd=cfg["actions"].get("custom_double_command", ""),
@@ -94,7 +102,7 @@ def run_daemon(web: bool = False, web_port: int = 49152):
 
     def on_triple():
         action = cfg["actions"]["triple_clap"]
-        console.print(f"[bold magenta]👏👏 3× Klatschen erkannt![/bold magenta] Führe Aktion aus: [cyan]{action}[/cyan]")
+        console.print(f"[bold magenta]👏👏👏 3× Klatschen erkannt![/bold magenta] Führe Aktion aus: [cyan]{action}[/cyan]")
         execute_action(
             action,
             custom_cmd=cfg["actions"].get("custom_triple_command", ""),
@@ -105,6 +113,8 @@ def run_daemon(web: bool = False, web_port: int = 49152):
     pattern = PatternRecognizer(
         on_double_clap=on_double,
         on_triple_clap=on_triple,
+        on_wake_clap=on_wake,
+        smart_sleep_wake=cfg["audio"].get("smart_sleep_wake", True),
         min_interval=cfg["audio"]["min_clap_interval"],
         max_interval=cfg["audio"]["max_clap_interval"],
         pattern_timeout=cfg["audio"]["pattern_timeout"],
@@ -113,8 +123,9 @@ def run_daemon(web: bool = False, web_port: int = 49152):
 
     console.print(Panel.fit(
         f"[bold green]👏 ClapControl Daemon gestartet[/bold green]\n"
-        f"• 2× Klatschen ➔ [cyan]{cfg['actions']['double_clap']}[/cyan]\n"
-        f"• 3× Klatschen ➔ [cyan]{cfg['actions']['triple_clap']}[/cyan]\n"
+        f"• [bold yellow]2× Klatschen[/bold yellow] ➔ [cyan]{cfg['actions']['double_clap']}[/cyan] (Ruhemodus)\n"
+        f"• [bold green]1× Klatschen[/bold green] (im Ruhemodus) ➔ [cyan]{cfg['actions'].get('single_clap_when_sleeping', 'display_wake')}[/cyan] (Aufwachen)\n"
+        f"• [bold magenta]3× Klatschen[/bold magenta] ➔ [cyan]{cfg['actions']['triple_clap']}[/cyan] (Media Toggle)\n"
         f"• Empfindlichkeit: [yellow]{cfg['audio']['sensitivity']}%[/yellow]\n"
         f"• Konfigurationsdatei: [dim]{CONFIG_FILE}[/dim]",
         border_style="green"
@@ -153,7 +164,7 @@ def main():
 
     # Test actions
     test_parser = subparsers.add_parser("test", help="Testet Aktionen ohne Klatschen")
-    test_parser.add_argument("action", choices=["double", "triple", "mute"], help="Welche Aktion getestet werden soll")
+    test_parser.add_argument("action", choices=["double", "triple", "wake", "mute"], help="Welche Aktion getestet werden soll")
 
     args = parser.parse_args()
 
@@ -165,6 +176,8 @@ def main():
         cfg = load_config()
         if args.action == "double":
             execute_action(cfg["actions"]["double_clap"])
+        elif args.action == "wake":
+            execute_action("display_wake")
         elif args.action == "triple":
             execute_action(cfg["actions"]["triple_clap"])
         elif args.action == "mute":

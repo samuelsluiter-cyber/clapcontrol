@@ -4,24 +4,26 @@ import yaml
 
 DEFAULT_CONFIG = {
     "audio": {
-        "device_index": None,  # None = default input device
+        "device_index": None,       # None = default input device
         "sample_rate": 44100,
         "chunk_size": 1024,
-        "sensitivity": 70,     # 1 to 100
+        "sensitivity": 70,          # 1 to 100
+        "smart_sleep_wake": True,   # 2x Klatschen = Schlaf, 1x Klatschen wenn dunkel = Aufwachen!
         "noise_floor_decay": 0.95,
         "min_clap_interval": 0.15,  # seconds between claps
         "max_clap_interval": 0.75,  # max seconds to wait for next clap
-        "pattern_timeout": 0.40,   # wait after 2nd clap to see if 3rd arrives
-        "cooldown": 1.0            # cooldown after action execution
+        "pattern_timeout": 0.40,    # wait after 2nd clap to see if 3rd arrives
+        "cooldown": 1.2             # cooldown after action execution
     },
     "actions": {
-        "double_clap": "media_toggle",   # options: media_toggle, volume_mute, display_sleep, custom
-        "triple_clap": "display_sleep",   # options: media_toggle, volume_mute, display_sleep, custom
+        "double_clap": "display_sleep",               # 2x Klatschen: Display Ruhemodus
+        "single_clap_when_sleeping": "display_wake",  # 1x Klatschen im Ruhezustand: Display wieder an
+        "triple_clap": "media_toggle",                # 3x Klatschen: Play/Pause Musik
         "custom_double_command": "",
         "custom_triple_command": ""
     },
     "feedback": {
-        "audio_feedback": True,    # play a gentle click/tick when recognized
+        "audio_feedback": True,     # play a gentle click/tick when recognized
         "feedback_sound": "/System/Library/Sounds/Tink.aiff"
     }
 }
@@ -37,7 +39,6 @@ def load_config() -> dict:
     try:
         with open(CONFIG_FILE, "r", encoding="utf-8") as f:
             user_cfg = yaml.safe_load(f) or {}
-            # Merge with defaults
             cfg = DEFAULT_CONFIG.copy()
             for k, v in user_cfg.items():
                 if isinstance(v, dict) and k in cfg:
