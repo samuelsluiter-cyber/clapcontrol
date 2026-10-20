@@ -164,7 +164,7 @@ def main():
 
     # Test actions
     test_parser = subparsers.add_parser("test", help="Testet Aktionen ohne Klatschen")
-    test_parser.add_argument("action", choices=["double", "triple", "wake", "mute"], help="Welche Aktion getestet werden soll")
+    test_parser.add_argument("action", choices=["double", "triple", "wake", "mute", "butler"], help="Welche Aktion getestet werden soll")
 
     args = parser.parse_args()
 
@@ -178,6 +178,8 @@ def main():
             execute_action(cfg["actions"]["double_clap"])
         elif args.action == "wake":
             execute_action("display_wake")
+        elif args.action == "butler":
+            execute_action("butler_briefing")
         elif args.action == "triple":
             execute_action(cfg["actions"]["triple_clap"])
         elif args.action == "mute":

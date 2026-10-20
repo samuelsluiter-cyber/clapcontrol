@@ -44,14 +44,18 @@ def wake_display():
     """Wakes displays from sleep via user-activity assertion."""
     try:
         subprocess.run(["caffeinate", "-u", "-t", "2"], capture_output=True, timeout=2)
-        # Also send a harmless key event to ensure immediate screen light up
         subprocess.run(["osascript", "-e", 'tell application "System Events" to key code 58'], capture_output=True, timeout=2)
     except Exception:
         pass
 
+def trigger_butler():
+    """Asynchronously speaks the casual daily briefing."""
+    from .butler import speak_briefing
+    threading.Thread(target=speak_briefing, daemon=True).start()
+
 def execute_action(action_name: str, custom_cmd: str = "", feedback: bool = True, sound_path: str = ""):
     """Executes the specified action."""
-    if feedback and sound_path:
+    if feedback and sound_path and action_name != "butler_briefing":
         play_feedback_sound(sound_path)
 
     if action_name == "media_toggle":
@@ -62,6 +66,11 @@ def execute_action(action_name: str, custom_cmd: str = "", feedback: bool = True
         sleep_display()
     elif action_name == "display_wake":
         wake_display()
+    elif action_name == "butler_briefing":
+        trigger_butler()
+    elif action_name == "wake_and_butler":
+        wake_display()
+        trigger_butler()
     elif action_name == "custom" and custom_cmd:
         try:
             subprocess.Popen(custom_cmd, shell=True)
