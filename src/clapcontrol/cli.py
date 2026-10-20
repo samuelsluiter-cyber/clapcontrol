@@ -179,9 +179,10 @@ def main():
         elif args.action == "wake":
             execute_action("display_wake")
         elif args.action == "butler":
-            execute_action("butler_briefing")
+            console.print("[cyan]Spreche Briefing...[/cyan]")
+            execute_action("butler_briefing", wait=True)
         elif args.action == "triple":
-            execute_action(cfg["actions"]["triple_clap"])
+            execute_action(cfg["actions"]["triple_clap"], wait=True)
         elif args.action == "mute":
             execute_action("volume_mute")
         console.print(f"[green]Aktion '{args.action}' ausgeführt.[/green]")

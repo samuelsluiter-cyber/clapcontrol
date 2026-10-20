@@ -16,7 +16,6 @@ def toggle_media():
     else if application "Music" is running then
         tell application "Music" to playpause
     else
-        -- Fallback: simulate keyboard play/pause media key
         tell application "System Events" to key code 100
     end if
     '''
@@ -48,12 +47,15 @@ def wake_display():
     except Exception:
         pass
 
-def trigger_butler():
-    """Asynchronously speaks the casual daily briefing."""
+def trigger_butler(wait: bool = False):
+    """Speaks the casual daily briefing (synchronously if testing, async otherwise)."""
     from .butler import speak_briefing
-    threading.Thread(target=speak_briefing, daemon=True).start()
+    if wait:
+        speak_briefing()
+    else:
+        threading.Thread(target=speak_briefing, daemon=True).start()
 
-def execute_action(action_name: str, custom_cmd: str = "", feedback: bool = True, sound_path: str = ""):
+def execute_action(action_name: str, custom_cmd: str = "", feedback: bool = True, sound_path: str = "", wait: bool = False):
     """Executes the specified action."""
     if feedback and sound_path and action_name != "butler_briefing":
         play_feedback_sound(sound_path)
@@ -67,10 +69,10 @@ def execute_action(action_name: str, custom_cmd: str = "", feedback: bool = True
     elif action_name == "display_wake":
         wake_display()
     elif action_name == "butler_briefing":
-        trigger_butler()
+        trigger_butler(wait=wait)
     elif action_name == "wake_and_butler":
         wake_display()
-        trigger_butler()
+        trigger_butler(wait=wait)
     elif action_name == "custom" and custom_cmd:
         try:
             subprocess.Popen(custom_cmd, shell=True)
