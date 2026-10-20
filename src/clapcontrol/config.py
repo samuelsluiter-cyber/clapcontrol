@@ -1,0 +1,54 @@
+"""ClapControl configuration management."""
+from pathlib import Path
+import yaml
+
+DEFAULT_CONFIG = {
+    "audio": {
+        "device_index": None,  # None = default input device
+        "sample_rate": 44100,
+        "chunk_size": 1024,
+        "sensitivity": 70,     # 1 to 100
+        "noise_floor_decay": 0.95,
+        "min_clap_interval": 0.15,  # seconds between claps
+        "max_clap_interval": 0.75,  # max seconds to wait for next clap
+        "pattern_timeout": 0.40,   # wait after 2nd clap to see if 3rd arrives
+        "cooldown": 1.0            # cooldown after action execution
+    },
+    "actions": {
+        "double_clap": "media_toggle",   # options: media_toggle, volume_mute, display_sleep, custom
+        "triple_clap": "display_sleep",   # options: media_toggle, volume_mute, display_sleep, custom
+        "custom_double_command": "",
+        "custom_triple_command": ""
+    },
+    "feedback": {
+        "audio_feedback": True,    # play a gentle click/tick when recognized
+        "feedback_sound": "/System/Library/Sounds/Tink.aiff"
+    }
+}
+
+CONFIG_DIR = Path.home() / ".config" / "clapcontrol"
+CONFIG_FILE = CONFIG_DIR / "config.yaml"
+
+def load_config() -> dict:
+    CONFIG_DIR.mkdir(parents=True, exist_ok=True)
+    if not CONFIG_FILE.exists():
+        save_config(DEFAULT_CONFIG)
+        return DEFAULT_CONFIG.copy()
+    try:
+        with open(CONFIG_FILE, "r", encoding="utf-8") as f:
+            user_cfg = yaml.safe_load(f) or {}
+            # Merge with defaults
+            cfg = DEFAULT_CONFIG.copy()
+            for k, v in user_cfg.items():
+                if isinstance(v, dict) and k in cfg:
+                    cfg[k].update(v)
+                else:
+                    cfg[k] = v
+            return cfg
+    except Exception:
+        return DEFAULT_CONFIG.copy()
+
+def save_config(cfg: dict):
+    CONFIG_DIR.mkdir(parents=True, exist_ok=True)
+    with open(CONFIG_FILE, "w", encoding="utf-8") as f:
+        yaml.dump(cfg, f, default_flow_style=False, sort_keys=False)

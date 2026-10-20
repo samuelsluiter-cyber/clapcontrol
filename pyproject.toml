@@ -1,0 +1,22 @@
+[project]
+name = "clapcontrol"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+authors = [
+    { name = "samuelsluiter-cyber", email = "samuel.sluiter@icloud.com" }
+]
+requires-python = ">=3.14"
+dependencies = [
+    "numpy>=2.5.4",
+    "pyyaml>=6.0.3",
+    "rich>=15.0.0",
+    "sounddevice>=0.5.6",
+]
+
+[project.scripts]
+clapcontrol = "clapcontrol:main"
+
+[build-system]
+requires = ["uv_build>=0.12.19,<0.13.0"]
+build-backend = "uv_build"
